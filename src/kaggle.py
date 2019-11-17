@@ -8,35 +8,27 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-def import_dataX(filename_train, filename_test):
 
+def import_dataX(filename_train, filename_test):
     data_x = pd.read_csv(filename_train)
     # df_x = pd.DataFrame(data_x)
 
     data_y = pd.read_csv(filename_test)
-    # df_y = pd.DataFrame(data_y)
     data_y = pd.merge(data_x, data_y, how='inner', on='Id')
     data_x = data_x.dropna(subset=['Score', 'Text'])
     data_x = drop_unnecessary(data_x)
-
-    data_x = data_x.sample(4000)
+    data_x = data_x.drop(['Id'], axis=1)
 
     data_y = data_y.dropna(subset=['Text'])
     data_y = drop_unnecessary(data_y)
     data_y = data_y.drop(['Score_x'], axis=1)
-    data_y = data_y.sample(4000)
-    # print(data_x)
-    # print(data_y)
 
+    #     print(data_y)
     return data_x, data_y
 
 
-
-
-
 def drop_unnecessary(Imported_df):
-    Imported_df = Imported_df.drop(['Id',
-                                    'Summary',
+    Imported_df = Imported_df.drop(['Summary',
                                     'Time',
                                     'ProductId',
                                     'UserId',
@@ -44,6 +36,7 @@ def drop_unnecessary(Imported_df):
                                     'HelpfulnessDenominator'], axis=1)
     # print(Imported_df)
     return Imported_df
+
 
 def extract_keywords(Inported_df):
     keyword_list = []
@@ -77,25 +70,25 @@ def extract_keywords(Inported_df):
 
 
 def split_keywords(df):
-    df['kw1'],\
-    df['kw2'],\
-    df['kw3'],\
-    df['kw4'],\
-    df['kw5'],\
+    df['kw1'], \
+    df['kw2'], \
+    df['kw3'], \
+    df['kw4'], \
+    df['kw5'], \
     df['kw6'], \
     df['kw7'], \
     df['kw8'], \
     df['kw9'], \
     df['kw10'], \
     df['kw11'], \
-    df['kw12'],\
-    df['kw13'],\
-    df['kw14'],\
-    df['kw15'],\
-    df['kw16'],\
-    df['kw17'],\
-    df['kw18'],\
-    df['kw19'],\
+    df['kw12'], \
+    df['kw13'], \
+    df['kw14'], \
+    df['kw15'], \
+    df['kw16'], \
+    df['kw17'], \
+    df['kw18'], \
+    df['kw19'], \
     df['kw20'] = df['Keyword'].str.split(' ', 19).str
     # print(df)
     df = df.drop(['Keyword'], axis=1)
@@ -152,20 +145,27 @@ def split_x_y(df):
 def split_x_y_test(test_df):
     test_y_df = pd.DataFrame()
     test_y_df['Score'] = test_df['Score_y']
-    test_df = test_df.drop(['Score'], axis=1)
+    test_df = test_df.drop(['Score_y'], axis=1)
     return test_df, test_y_df
 
 
 def PCA_kw(x_df):
     data = StandardScaler().fit(x_df).transform(x_df)
-    pca = PCA(n_components=400).fit_transform(data)
+    pca = PCA(n_components=4).fit_transform(data)
     x_reduct = pd.DataFrame(pca)
     return x_reduct
 
 
-def lbg_classifier(train_df, test_df):
+def gb_classifier(train_df, test_df):
+    print(test_df)
     train_df, y_df = split_x_y(train_df)
     test_df, test_y_df = split_x_y_test(test_df)
+    test_id_df = pd.DataFrame()
+    test_id_df['Id'] = test_df['Id']
+    test_df = test_df.drop(['Id'], axis=1)
+    #     print(test_id_df)
+    #     print(test_df)
+    #     print(test_y_df)
     train_df = PCA_kw(train_df)
     test_df = PCA_kw(test_df)
 
@@ -175,26 +175,28 @@ def lbg_classifier(train_df, test_df):
         learning_rate=0.06, random_state=20
     )
     data = clf.fit(train_df, y_df.values.ravel())
-    print(data)
+    #     print(data)
     pre = clf.predict(test_df)
-    # print(pre.score())
 
-# def svm_classifier(train_df, test_df):
-#     y_df = pd.DataFrame()
-#     y_df['Score'] = train_df['Score']
-#     train_df = train_df.drop(['Score'], axis=1)
-#     clf =
+    result = np.where(pre == -1, 0, pre)
+    result = result.tolist()
+    final_df = pd.DataFrame()
+    final_df['Id'] = test_id_df['Id']
+    final_df['Score'] = result
+    final_df.to_csv(r'/kaggle/working/logreg_2.csv', index=False)
+
+    print(final_df)
 
 
+#     print(pre)
+# print(pre.score())
 
-imported_df_train, improted_df_test = import_dataX('/Users/yufanwen/PycharmProjects/cs506_midterm/bu-cs-506-fall-2019-midterm-competition/train.csv',
-                                           '/Users/yufanwen/PycharmProjects/cs506_midterm/bu-cs-506-fall-2019-midterm-competition/test.csv')
 
+imported_df_train, improted_df_test = import_dataX('/kaggle/input/bu-cs-506-fall-2019-midterm-competition/train.csv',
+                                                   '/kaggle/input/bu-cs-506-fall-2019-midterm-competition/test.csv')
 
 text_train = extract_keywords(imported_df_train)
 text_test = extract_keywords(improted_df_test)
 encoded_df_train = text_encode(text_train)
 encoded_df_test = text_encode(text_test)
-print(encoded_df_test)
-print(encoded_df_train)
-# a = lbg_classifier(encoded_df_train, encoded_df_test)
+a = gb_classifier(encoded_df_train, encoded_df_test)
